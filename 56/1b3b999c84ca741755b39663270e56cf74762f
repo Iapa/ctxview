@@ -1,0 +1,482 @@
+.github/workflows/release.yml
+  h_7fb8a190cd3399 1-52
+.gitignore
+  h_7fb8a190cd3399 1-4
+.goreleaser.yaml
+  h_7fb8a190cd3399 1-62
+Formula/ctxview.rb
+  h_7fb8a190cd3399 1-50
+Makefile
+  h_7fb8a190cd3399 1-30
+README.md
+  h_7fb8a190cd3399 1-65
+go.mod
+  h_7fb8a190cd3399 1-5
+go.sum
+  h_7fb8a190cd3399 1-2
+install.sh
+  h_7fb8a190cd3399 1-159
+internal/lazyre/lazyre.go
+  h_7fb8a190cd3399 1-124
+internal/redact/allowkept.go
+  h_7fb8a190cd3399 1-91
+internal/redact/bip39english.txt
+  h_7fb8a190cd3399 1-2048
+internal/redact/crypto.go
+  h_7fb8a190cd3399 1-394
+internal/redact/dateword.go
+  h_7fb8a190cd3399 1-185
+internal/redact/fieldvalue.go
+  h_7fb8a190cd3399 1-304
+internal/redact/ids.go
+  h_7fb8a190cd3399 1-309
+internal/redact/json.go
+  h_7fb8a190cd3399 1-627
+internal/redact/known.go
+  h_7fb8a190cd3399 1-381
+internal/redact/model.go
+  h_7fb8a190cd3399 1-1039
+internal/redact/more.go
+  h_7fb8a190cd3399 1-618
+internal/redact/phone.go
+  h_7fb8a190cd3399 1-169
+internal/redact/redact.go
+  h_7fb8a190cd3399 1-1898
+internal/redact/rulememo.go
+  h_7fb8a190cd3399 1-80
+internal/redact/rules.go
+  h_7fb8a190cd3399 1-146
+internal/redact/scrub.go
+  h_7fb8a190cd3399 1-223
+internal/redact/shape.go
+  h_7fb8a190cd3399 1-516
+internal/redact/thingname.go
+  h_7fb8a190cd3399 1-293
+internal/redact/writer.go
+  h_7fb8a190cd3399 1-405
+internal/redact/zhdict.txt
+  h_7fb8a190cd3399 1-87
+internal/redact/zhname.go
+  h_7fb8a190cd3399 1-490
+local_sessions.go
+  h_7fb8a190cd3399 1-1373
+main.go
+  h_7fb8a190cd3399 1-191
+main_test.go
+  h_7fb8a190cd3399 1-314
+prompt.go
+  h_7fb8a190cd3399 1-1541
+proxy_store.go
+  h_7fb8a190cd3399 1-875
+redact.go
+  h_7fb8a190cd3399 1-185
+redact_scan_test.go
+  h_7fb8a190cd3399 1-562
+server.go
+  h_7fb8a190cd3399 1-1176
+web/host.js
+  h_7fb8a190cd3399 1-857
+web/index.html
+  h_7fb8a190cd3399 1-85
+web/vendor/app.css
+  h_7fb8a190cd3399 1-5424
+web/vendor/context.css
+  h_7fb8a190cd3399 1-440
+web/vendor/context.js
+  h_7fb8a190cd3399 1-1585
+web/vendor/ctxtext.js
+  h_7fb8a190cd3399 1-223
+web/vendor/i18n.js
+  h_7fb8a190cd3399 1-21286
+web/vendor/icons/ai21.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/ai302-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/ai360-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/aihubmix-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/aionui.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/air.svg
+  h_7fb8a190cd3399 1-4
+web/vendor/icons/alibaba-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/alibabacloud-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/anthropic.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/antigravity-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/anyscale-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/aside.svg
+  h_7fb8a190cd3399 1-28
+web/vendor/icons/astrbot.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/aws.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/azure-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/azureai-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/baichuan-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/baidu-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/baiducloud-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/bailian-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/baseten.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/bedrock-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/bob-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/burncloud-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/bytedance-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/cerebras.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/chatglm-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/cherryin-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/cherrystudio-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/chutes.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/claude-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/claudecode-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/cline.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/cloudflare-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/codebuddy-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/codex-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/cohere-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/cometapi-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/commandcode.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/copilot-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/coze.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/craft-agents-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/curl.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/cursor.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/deepinfra-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/deepmind-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/deepseek-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/deveco-color.svg
+  h_7fb8a190cd3399 1-12
+web/vendor/icons/devin.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/doubao-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/empryo-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/factory.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/favicon.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/featherless-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/fireworks-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/flowdown-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/friendli.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/fx.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/gemini-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/geminicli-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/gemma-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/giteeai.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/github.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/githubcopilot.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/glama.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/gmicloud.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/google-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/googlecloud-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/goose.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/grok.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/groq.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/hermes.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/huawei-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/huaweicloud-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/huggingface-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/hunyuan-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/hyperbolic-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/iflytekcloud-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/inference.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/infinigence-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/internlm-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/jcode.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/jina.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/kilo.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/kilocode.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/kimi.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/kiro-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/kling-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/lambda.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/leptonai-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/liquid.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/liveagent-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/llmapi.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/lmstudio.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/longcat.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/memory.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/meta-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/metaai-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/microsoft-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/mimocode.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/minimax-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/miniq-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/mistermorph-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/mistral-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/modelscope-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/monica-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/moonshot.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/morph-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/mu.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/nanobot-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/nebius.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/newapi-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/nousresearch.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/nova-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/novita-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/nvidia-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/obsidian.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/ollama.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/omlx.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/omo.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/omp.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/openai.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/openchamber.svg
+  h_7fb8a190cd3399 1-11
+web/vendor/icons/openclaw.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/opencode.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/openmausbot-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/openrouter.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/openwebui.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/paimon.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/parasail.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/penguin-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/perplexity-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/phala-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/pi.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/pipellm-color.svg
+  h_7fb8a190cd3399 1-5
+web/vendor/icons/poe.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/ppio-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/prime-agent.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/qiniu-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/qoder.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/qwen-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/qwenpaw.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/raycast.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/reasonix-color.svg
+  h_7fb8a190cd3399 1-48
+web/vendor/icons/reka.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/replicate.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/roocode.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/sambanova-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/sensenova-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/shelley-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/siliconcloud-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/snowflake-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/sophnet-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/spark-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/stepfun-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/stepfun.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/straico-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/submodel-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/t3code.svg
+  h_7fb8a190cd3399 1-4
+web/vendor/icons/targon-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/tencent-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/tencentcloud-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/tiangong-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/together-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/trae.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/tuanjie-cowork-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/upstage-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/venice-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/vercel.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/vertexai-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/vllm-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/volcengine-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/voyage-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/vscode.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/wenxin-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/windsurf.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/workbuddy-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/workersai-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/xai.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/xiaomimimo.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/xinference-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/yi.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/yuanbao-color.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/yylx.svg
+  h_7fb8a190cd3399 1-5
+web/vendor/icons/zai.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/zed.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/zenmux.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/zeroone.svg
+  h_7fb8a190cd3399 1
+web/vendor/icons/zhipu-color.svg
+  h_7fb8a190cd3399 1
+web/viewer.css
+  h_7fb8a190cd3399 1-610
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "561b3b999c84ca741755b39663270e56cf74762f",
+  "prompts": {},
+  "humans": {
+    "h_7fb8a190cd3399": {
+      "author": "Iapa <Iapa@users.noreply.github.com>"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+ctxview
+dist/
+.ctxview-data/
+*.log

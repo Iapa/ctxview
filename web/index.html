@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>上下文窗口检视器 · Context Window Viewer</title>
+  <link rel="stylesheet" href="/app.css" />
+  <link rel="stylesheet" href="/context.css" />
+  <link rel="stylesheet" href="/viewer.css" />
+</head>
+<body>
+  <div class="cv-shell">
+    <header class="cv-topbar">
+      <div class="cv-brand">
+        <span class="cv-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="4"/>
+            <path d="M3 10h18M10 10v11"/>
+          </svg>
+        </span>
+        <div>
+          <h1 id="cvTitle">上下文窗口 · Context Window</h1>
+          <p class="cv-subtitle" id="cvSub">支持网关抓包（方案1）/ 本地 Session（Claude · Codex · JoyCode）/ 手动导入</p>
+        </div>
+      </div>
+
+      <div class="cv-actions">
+        <button type="button" class="text on" id="btnRedact" title="切换敏感信息脱敏">脱敏: 开</button>
+        <button type="button" class="text" id="btnScanDirs">扫描目录</button>
+        <button type="button" class="text" id="btnProxyHelp">代理网关配置</button>
+        <button type="button" class="text" id="btnRescan">重新扫描本地</button>
+        <button type="button" class="text primary" id="btnImport">导入 / 粘贴数据</button>
+        <button type="button" class="text" id="btnLang" title="切换语言">中文 / EN</button>
+        <button type="button" class="text" id="btnTheme" title="切换主题">深色</button>
+      </div>
+    </header>
+
+    <section class="cv-toolbar">
+      <div class="cv-sources" id="sourceTabs" role="tablist" aria-label="数据源筛选"></div>
+      <div class="cv-toolbar-right">
+        <span class="cv-hint" id="proxyHint"></span>
+        <div id="ctxRange"></div>
+      </div>
+    </section>
+
+    <section class="cv-hero" id="heroInspector">
+      <div class="cv-hero-bar">
+        <div class="cv-pickers">
+          <label class="cv-pick">
+            <span id="lblSession">会话 / 来源</span>
+            <select id="sessionSelect"></select>
+          </label>
+          <label class="cv-pick">
+            <span id="lblTurn">轮次 / 请求</span>
+            <select id="turnSelect"></select>
+          </label>
+        </div>
+        <div class="cv-turn-nav">
+          <button type="button" class="text" id="btnPrevTurn">← 上一轮</button>
+          <button type="button" class="text" id="btnNextTurn">下一轮 →</button>
+        </div>
+      </div>
+      <div id="heroCtxMount" class="cv-hero-mount"></div>
+    </section>
+
+    <section class="cv-sessions-wrap">
+      <div id="contextPane" class="context-pane"></div>
+    </section>
+  </div>
+
+  <span id="status" class="status" role="status" aria-atomic="true"></span>
+  <div class="modal" id="modal" hidden><div class="dialog"></div></div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+  </script>
+  <script src="/i18n.js"></script>
+  <script src="/host.js"></script>
+  <script src="/context.js"></script>
+  <script>
+    window.initViewer?.();
+  </script>
+</body>
+</html>
+

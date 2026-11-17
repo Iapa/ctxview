@@ -1,0 +1,62 @@
+version: 2
+
+project_name: ctxview
+
+before:
+  hooks:
+    - go test ./...
+
+builds:
+  - id: ctxview
+    main: .
+    binary: ctxview
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+brews:
+  - name: ctxview
+    repository:
+      owner: Iapa
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: https://github.com/Iapa/ctxview
+    description: Local Context Window Inspector and reverse-proxy analyzer for LLM coding agents
+    license: MIT
+    commit_author:
+      name: Iapa
+      email: Iapa@users.noreply.github.com
+    test: |
+      assert_match(/\S+/, shell_output("#{bin}/ctxview -version").strip)
+    extra_install: |
+      # Users can run `brew services start ctxview` if service block is added manually.
+

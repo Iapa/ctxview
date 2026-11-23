@@ -1,0 +1,16 @@
+web/skills.css
+  h_b681ef6994f43c 178-183
+web/skills.js
+  h_b681ef6994f43c 2539,3039-3041,3401,3403-3405,3409-3410,3502-3521,3566-3567,3609,3629-3631,3650,3670-3672,3971-3974,3978,4009,4136-4138,5610
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "4fcc80d2692f6ae41ec92c37ca7bcc312e5270db",
+  "prompts": {},
+  "humans": {
+    "h_b681ef6994f43c": {
+      "author": "niuxiaoming.5 <niuxiaoming.5@jd.com>"
+    }
+  }
+}

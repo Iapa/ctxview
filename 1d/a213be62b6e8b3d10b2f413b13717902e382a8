@@ -1,0 +1,14 @@
+.goreleaser.yaml
+  h_b681ef6994f43c 58-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1da213be62b6e8b3d10b2f413b13717902e382a8",
+  "prompts": {},
+  "humans": {
+    "h_b681ef6994f43c": {
+      "author": "niuxiaoming.5 <niuxiaoming.5@jd.com>"
+    }
+  }
+}

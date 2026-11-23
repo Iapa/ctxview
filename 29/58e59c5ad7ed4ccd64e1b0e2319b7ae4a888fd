@@ -1,0 +1,38 @@
+main.go
+  h_b681ef6994f43c 113,152,162,181
+server.go
+  h_b681ef6994f43c 435,574-581,898-900,948-949,955-1519
+skills_adapters.go
+  h_b681ef6994f43c 1-571
+skills_projects.go
+  h_b681ef6994f43c 1-1298
+skills_scanner.go
+  h_b681ef6994f43c 1-703
+skills_store.go
+  h_b681ef6994f43c 1-1466
+skills_sync.go
+  h_b681ef6994f43c 1-467
+skills_test.go
+  h_b681ef6994f43c 1-885
+web/host.js
+  h_b681ef6994f43c 307-370,373-389,884-893,897-913,926-930,954-958,967-972
+web/index.html
+  h_b681ef6994f43c 10,28-32,44-49,51-68,70-76,78,83-84,92
+web/skills.css
+  h_b681ef6994f43c 1-1126
+web/skills.js
+  h_b681ef6994f43c 1-5679
+web/viewer.css
+  h_b681ef6994f43c 611-637
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "2958e59c5ad7ed4ccd64e1b0e2319b7ae4a888fd",
+  "prompts": {},
+  "humans": {
+    "h_b681ef6994f43c": {
+      "author": "niuxiaoming.5 <niuxiaoming.5@jd.com>"
+    }
+  }
+}

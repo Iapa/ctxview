@@ -304,12 +304,89 @@ window.openRoute = async (id, _time, opts) => {
   }
 };
 
+function isSkillsHash(h) {
+  return (
+    h.startsWith("#/global-workspace") ||
+    h.startsWith("#/lobster-workspace") ||
+    h.startsWith("#/skills-library") ||
+    h === "#/projects" ||
+    h.startsWith("#/projects/") ||
+    h.startsWith("#/project/")
+  );
+}
+
+function initialViewFromLocation() {
+  const h = location.hash || "";
+  if (isSkillsHash(h)) return "skills";
+  if (h === "#/context" || h.startsWith("#/context/")) return "context";
+  const v = typeof params !== "undefined" ? params.get("view") : null;
+  if (v === "skills" || v === "context") return v;
+  return localStorage.getItem("ctxview.view") === "skills" ? "skills" : "context";
+}
+
+function syncViewDom() {
+  const isSkills = viewerState.view === "skills";
+  const vc = $("#viewContext");
+  const vs = $("#viewSkills");
+  if (vc) vc.hidden = isSkills;
+  if (vs) vs.hidden = !isSkills;
+  const navCtx = $("#navContext");
+  const navSk = $("#navSkills");
+  if (navCtx) {
+    if (!isSkills) navCtx.setAttribute("aria-current", "page");
+    else navCtx.removeAttribute("aria-current");
+  }
+  if (navSk) {
+    if (isSkills) navSk.setAttribute("aria-current", "page");
+    else navSk.removeAttribute("aria-current");
+  }
+  for (const id of ["#btnScanDirs", "#btnProxyHelp", "#btnRescan", "#btnImport"]) {
+    const b = $(id);
+    if (b) b.hidden = isSkills;
+  }
+}
+
+async function setActiveView(nextView, opts = {}) {
+  const normalized = nextView === "skills" ? "skills" : "context";
+  viewerState.view = normalized;
+  localStorage.setItem("ctxview.view", normalized);
+  if (!opts.fromHash) {
+    if (normalized === "context") {
+      if (location.hash && !location.hash.startsWith("#/context")) {
+        location.hash = "#/context";
+      }
+    } else if (!isSkillsHash(location.hash || "")) {
+      location.hash = "#/global-workspace";
+    }
+  }
+  syncViewDom();
+  applyThemeAndLangLabels();
+  if (normalized === "skills") {
+    await window.SkillsWorkspace?.onActivate?.();
+  } else {
+    await refreshAll();
+  }
+}
+
 function applyThemeAndLangLabels() {
   const isZh = viewerState.lang === "zh";
-  $("#cvTitle").textContent = isZh ? "上下文窗口 · Context Window" : "Context Window Viewer";
-  $("#cvSub").textContent = isZh
-    ? "支持网关抓包（方案1）/ 本地 Session（Claude · Codex · JoyCode）/ 手动导入"
-    : "Reverse Proxy Capture / Local Sessions (Claude · Codex · JoyCode) / Manual Import";
+  const isSkills = viewerState.view === "skills";
+  $("#cvTitle").textContent = isSkills
+    ? (isZh ? "全局与项目 Agent Skills 工作区" : "Global & Project Agent Skills Workspace")
+    : (isZh ? "上下文窗口 · Context Window" : "Context Window Viewer");
+  $("#cvSub").textContent = isSkills
+    ? (isZh
+        ? "56+ AI Agent 全局技能 · 项目与关联工作区 · 中央仓库管理 · 软链/复制同步 · Preset 编排"
+        : "56+ AI Agents Global Skills · Project & Linked Workspaces · Central Library · Presets")
+    : (isZh
+        ? "支持网关抓包（方案1）/ 本地 Session（Claude · Codex · JoyCode）/ 手动导入"
+        : "Reverse Proxy Capture / Local Sessions (Claude · Codex · JoyCode) / Manual Import");
+  const navCtx = $("#navContext");
+  const navSk = $("#navSkills");
+  const viewNav = $("#viewNav");
+  if (navCtx) navCtx.textContent = isZh ? "上下文窗口" : "Context Window";
+  if (navSk) navSk.textContent = isZh ? "Agent Skills 工作区" : "Agent Skills";
+  if (viewNav) viewNav.setAttribute("aria-label", isZh ? "视图切换" : "View Switcher");
   const btnRedact = $("#btnRedact");
   if (btnRedact) {
     btnRedact.classList.toggle("on", viewerState.redact);
@@ -804,8 +881,35 @@ async function refreshAll() {
 }
 
 window.initViewer = async () => {
+  viewerState.view = initialViewFromLocation();
+  window.ctxViewerHost = {
+    state: viewerState,
+    setView: setActiveView,
+    icon: typeof icon === "function" ? icon : null,
+    status,
+    statusErr,
+    applyThemeAndLangLabels,
+  };
+  syncViewDom();
   applyThemeAndLangLabels();
   renderSourceTabs();
+
+  $("#navContext")?.addEventListener("click", () => setActiveView("context"));
+  $("#navSkills")?.addEventListener("click", () => setActiveView("skills"));
+  window.addEventListener("hashchange", async () => {
+    const h = location.hash || "";
+    if (isSkillsHash(h)) {
+      if (viewerState.view !== "skills") {
+        await setActiveView("skills", { fromHash: true });
+      } else {
+        await window.SkillsWorkspace?.handleHash?.();
+      }
+    } else if (h === "#/context" || h.startsWith("#/context/")) {
+      if (viewerState.view !== "context") {
+        await setActiveView("context", { fromHash: true });
+      }
+    }
+  });
 
   const btnRedact = $("#btnRedact");
   if (btnRedact) {
@@ -819,7 +923,11 @@ window.initViewer = async () => {
         ? (viewerState.redact ? "已开启隐私脱敏展示" : "已关闭脱敏（仅建议本地调试使用）")
         : (viewerState.redact ? "Redaction enabled" : "Redaction disabled (local debug only)"),
         viewerState.redact ? "ok" : "warn");
-      await refreshAll();
+      if (viewerState.view === "skills") {
+        await window.SkillsWorkspace?.refreshOnHostChange?.();
+      } else {
+        await refreshAll();
+      }
     };
   }
   const btnScanDirs = $("#btnScanDirs");
@@ -843,7 +951,11 @@ window.initViewer = async () => {
     applyThemeAndLangLabels();
     renderSourceTabs();
     viewerState.heroCard = null;
-    await refreshAll();
+    if (viewerState.view === "skills") {
+      await window.SkillsWorkspace?.refreshOnHostChange?.();
+    } else {
+      await refreshAll();
+    }
   };
   $("#btnTheme").onclick = () => {
     viewerState.theme = viewerState.theme === "dark" ? "light" : "dark";
@@ -852,6 +964,11 @@ window.initViewer = async () => {
     applyThemeAndLangLabels();
   };
 
-  await refreshAll();
+  window.SkillsWorkspace?.init?.();
+  if (viewerState.view === "skills") {
+    await window.SkillsWorkspace?.onActivate?.();
+  } else {
+    await refreshAll();
+  }
 };
 

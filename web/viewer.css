@@ -608,3 +608,30 @@ button.text.on {
   border: 1px dashed var(--line-2);
 }
 
+
+/* Top-level View Switcher */
+.cv-view-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--seg-track);
+  border: 1px solid var(--line);
+}
+.cv-view-nav button[aria-current="page"] {
+  background: var(--seg-thumb);
+  color: var(--fg);
+  border-color: var(--seg-edge);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+  font-weight: 600;
+}
+.cv-view-nav button:not([aria-current="page"]) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.cv-view-nav button:not([aria-current="page"]):hover {
+  color: var(--fg);
+  background: var(--pill);
+}

@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/app.css" />
   <link rel="stylesheet" href="/context.css" />
   <link rel="stylesheet" href="/viewer.css" />
+  <link rel="stylesheet" href="/skills.css" />
 </head>
 <body>
   <div class="cv-shell">
@@ -24,6 +25,11 @@
         </div>
       </div>
 
+      <nav class="cv-view-nav" id="viewNav" aria-label="视图切换">
+        <button type="button" class="text" id="navContext" data-view="context" aria-current="page">上下文窗口</button>
+        <button type="button" class="text" id="navSkills" data-view="skills">Agent Skills 工作区</button>
+      </nav>
+
       <div class="cv-actions">
         <button type="button" class="text on" id="btnRedact" title="切换敏感信息脱敏">脱敏: 开</button>
         <button type="button" class="text" id="btnScanDirs">扫描目录</button>
@@ -35,41 +41,47 @@
       </div>
     </header>
 
-    <section class="cv-toolbar">
-      <div class="cv-sources" id="sourceTabs" role="tablist" aria-label="数据源筛选"></div>
-      <div class="cv-toolbar-right">
-        <span class="cv-hint" id="proxyHint"></span>
-        <div id="ctxRange"></div>
-      </div>
-    </section>
-
-    <section class="cv-hero" id="heroInspector">
-      <div class="cv-hero-bar">
-        <div class="cv-pickers">
-          <label class="cv-pick">
-            <span id="lblSession">会话 / 来源</span>
-            <select id="sessionSelect"></select>
-          </label>
-          <label class="cv-pick">
-            <span id="lblTurn">轮次 / 请求</span>
-            <select id="turnSelect"></select>
-          </label>
+    <main id="viewContext">
+      <section class="cv-toolbar">
+        <div class="cv-sources" id="sourceTabs" role="tablist" aria-label="数据源筛选"></div>
+        <div class="cv-toolbar-right">
+          <span class="cv-hint" id="proxyHint"></span>
+          <div id="ctxRange"></div>
         </div>
-        <div class="cv-turn-nav">
-          <button type="button" class="text" id="btnPrevTurn">← 上一轮</button>
-          <button type="button" class="text" id="btnNextTurn">下一轮 →</button>
-        </div>
-      </div>
-      <div id="heroCtxMount" class="cv-hero-mount"></div>
-    </section>
+      </section>
 
-    <section class="cv-sessions-wrap">
-      <div id="contextPane" class="context-pane"></div>
-    </section>
+      <section class="cv-hero" id="heroInspector">
+        <div class="cv-hero-bar">
+          <div class="cv-pickers">
+            <label class="cv-pick">
+              <span id="lblSession">会话 / 来源</span>
+              <select id="sessionSelect"></select>
+            </label>
+            <label class="cv-pick">
+              <span id="lblTurn">轮次 / 请求</span>
+              <select id="turnSelect"></select>
+            </label>
+          </div>
+          <div class="cv-turn-nav">
+            <button type="button" class="text" id="btnPrevTurn">← 上一轮</button>
+            <button type="button" class="text" id="btnNextTurn">下一轮 →</button>
+          </div>
+        </div>
+        <div id="heroCtxMount" class="cv-hero-mount"></div>
+      </section>
+
+      <section class="cv-sessions-wrap">
+        <div id="contextPane" class="context-pane"></div>
+      </section>
+    </main>
+
+    <main id="viewSkills" class="sw-shell" hidden></main>
   </div>
 
   <span id="status" class="status" role="status" aria-atomic="true"></span>
   <div class="modal" id="modal" hidden><div class="dialog"></div></div>
+  <dialog id="skillDialog" class="sw-dialog" closedby="any" aria-labelledby="skillDialogTitle"></dialog>
+  <dialog id="skillConfirmDialog" class="sw-dialog sw-dialog-sm" closedby="any" aria-labelledby="skillConfirmTitle"></dialog>
 
   <script>
     const params = new URLSearchParams(location.search);
@@ -77,6 +89,7 @@
   <script src="/i18n.js"></script>
   <script src="/host.js"></script>
   <script src="/context.js"></script>
+  <script src="/skills.js"></script>
   <script>
     window.initViewer?.();
   </script>

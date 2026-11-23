@@ -110,6 +110,7 @@ func main() {
 	host := flag.String("host", "", "HTTP listen host/IP (e.g. 127.0.0.1 or 0.0.0.0)")
 	dataDir := flag.String("data-dir", defaultDataDir(), "Directory for captured proxy/upload JSONL history and bodies")
 	sessionDir := flag.String("session-dir", "", "Comma-separated extra session directories or .jsonl files to scan")
+	skillsDir := flag.String("skills-dir", "", "Override central skills repository directory (defaults to <data-dir>/skills)")
 	anthropicUp := flag.String("anthropic-upstream", "https://api.anthropic.com", "Default upstream URL for /v1/messages")
 	openaiUp := flag.String("openai-upstream", "https://api.openai.com", "Default upstream URL for /v1/responses and /v1/chat/completions")
 	geminiUp := flag.String("gemini-upstream", "https://generativelanguage.googleapis.com", "Default upstream URL for /v1beta/")
@@ -148,6 +149,7 @@ func main() {
 	if !*noDemo {
 		seedDemoRecords(store)
 	}
+	skillsMgr := NewSkillsManager(*dataDir, *skillsDir)
 
 	handler := NewHandler(ServerConfig{
 		Store: store,
@@ -157,6 +159,7 @@ func main() {
 			Gemini:    *geminiUp,
 		},
 		ScanMgr:     scanMgr,
+		SkillsMgr:   skillsMgr,
 		SessionDirs: extraDirs,
 		IncludeHome: true,
 	})
@@ -175,6 +178,7 @@ func main() {
 	}
 	fmt.Printf("ctxview %s listening on http://%s\n", version, listen)
 	fmt.Printf("  Data dir: %s\n", *dataDir)
+	fmt.Printf("  Skills dir: %s (center skills=%d)\n", skillsMgr.centralDir, len(skillsMgr.ListCenterSkills(false)))
 	fmt.Printf("  Loaded records: total=%d (local=%d, proxy=%d, upload=%d, demo=%d)\n",
 		counts["all"], localCount, counts[SourceProxy], counts[SourceUpload], counts[SourceDemo])
 	fmt.Printf("  Proxy endpoints:\n")

@@ -432,6 +432,7 @@ type ServerConfig struct {
 	Upstream    *UpstreamConfig
 	AssetsDir   string
 	ScanMgr     *ScanManager
+	SkillsMgr   *SkillsManager
 	SessionDirs []string
 	IncludeHome bool
 }
@@ -569,6 +570,14 @@ func NewHandler(cfg ServerConfig) http.Handler {
 	scanMgr := cfg.ScanMgr
 	if scanMgr == nil {
 		scanMgr = NewScanManager(store, "", cfg.SessionDirs, cfg.IncludeHome)
+	}
+	skillsMgr := cfg.SkillsMgr
+	if skillsMgr == nil {
+		dataDir := ""
+		if store != nil {
+			dataDir = store.dataDir
+		}
+		skillsMgr = NewSkillsManager(dataDir, "")
 	}
 
 	// --- API routes ---
@@ -886,6 +895,9 @@ func NewHandler(cfg ServerConfig) http.Handler {
 		})
 	})
 
+	// --- Global Agent Skills Workspace Endpoints ---
+	registerSkillsRoutes(mux, skillsMgr)
+
 	// --- Reverse Proxy Endpoints (Scheme 1) ---
 
 	if cfg.Upstream != nil {
@@ -933,9 +945,576 @@ func NewHandler(cfg ServerConfig) http.Handler {
 		})
 		mux.Handle("GET /host.js", webSrv)
 		mux.Handle("GET /viewer.css", webSrv)
+		mux.Handle("GET /skills.js", webSrv)
+		mux.Handle("GET /skills.css", webSrv)
 	}
 
 	return mux
+}
+
+func decodeSkillsJSON(r *http.Request, dst any) error {
+	if r.Body == nil {
+		return http.ErrBodyReadAfterClose
+	}
+	dec := json.NewDecoder(io.LimitReader(r.Body, 4<<20))
+	return dec.Decode(dst)
+}
+
+func redactCenterSkillForHTTP(m *SkillsManager, sk *CenterSkill, redact bool) *CenterSkill {
+	if sk == nil {
+		return nil
+	}
+	cp := *sk
+	if cp.Tags == nil {
+		cp.Tags = []string{}
+	}
+	if redact {
+		cp.SourceRef = m.redactWithHome(cp.SourceRef, true)
+		cp.CentralPath = m.redactWithHome(cp.CentralPath, true)
+	}
+	return &cp
+}
+
+func redactSyncResultForHTTP(m *SkillsManager, res SyncBatchResult, redact bool) SyncBatchResult {
+	if !redact {
+		return res
+	}
+	for i := range res.Conflicts {
+		res.Conflicts[i].Path = m.redactWithHome(res.Conflicts[i].Path, true)
+	}
+	homeDir, _ := m.dirs()
+	for i := range res.Failures {
+		if homeDir != "" && homeDir != "." {
+			res.Failures[i].Error = strings.ReplaceAll(res.Failures[i].Error, homeDir, "~")
+		}
+		res.Failures[i].Error = replaceHomePaths(res.Failures[i].Error)
+	}
+	return res
+}
+
+func writeSkillsErrHTTP(w http.ResponseWriter, r *http.Request, m *SkillsManager, err error) {
+	if !wantsRedact(r) {
+		writeSkillsError(w, err)
+		return
+	}
+	homeDir, _ := m.dirs()
+	redactStr := func(s string) string {
+		if s == "" {
+			return s
+		}
+		if homeDir != "" && homeDir != "." {
+			s = strings.ReplaceAll(s, homeDir, "~")
+		}
+		return replaceHomePaths(s)
+	}
+	var redacted []TargetConflictDTO
+	if ref, ok := isReplaceRefused(err); ok {
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"error": redactStr(ref.Error()),
+			"code":  "TARGET_CONFLICT",
+			"conflicts": []TargetConflictDTO{{
+				Path:   m.redactWithHome(ref.Target, true),
+				Reason: redactStr(ref.Reason),
+			}},
+		})
+		return
+	}
+	if apiErr, ok := err.(*SkillsAPIError); ok {
+		for _, c := range apiErr.Conflicts {
+			redacted = append(redacted, TargetConflictDTO{
+				Path:   m.redactWithHome(c.Path, true),
+				Reason: redactStr(c.Reason),
+			})
+		}
+		cp := *apiErr
+		cp.Message = redactStr(cp.Message)
+		cp.Conflicts = redacted
+		writeSkillsError(w, &cp)
+		return
+	}
+	writeJSON(w, http.StatusInternalServerError, map[string]any{"error": redactStr(err.Error())})
+}
+
+func registerSkillsRoutes(mux *http.ServeMux, m *SkillsManager) {
+	mux.HandleFunc("GET /api/skills/agents", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, m.ListAgents(wantsRedact(r)))
+	})
+
+	mux.HandleFunc("GET /api/skills/agents/{agent}/skills", func(w http.ResponseWriter, r *http.Request) {
+		agent := r.PathValue("agent")
+		skills, err := m.GetAgentSkills(agent, wantsRedact(r))
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		if skills == nil {
+			skills = []AgentSkill{}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"agent":  agent,
+			"skills": skills,
+		})
+	})
+
+	mux.HandleFunc("GET /api/skills/agents/{agent}/document", func(w http.ResponseWriter, r *http.Request) {
+		agent := r.PathValue("agent")
+		relPath := strings.TrimSpace(r.URL.Query().Get("rel_path"))
+		if relPath == "" {
+			relPath = strings.TrimSpace(r.URL.Query().Get("path"))
+		}
+		doc, err := m.GetAgentSkillDocument(agent, relPath, wantsRedact(r))
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, doc)
+	})
+
+	mux.HandleFunc("POST /api/skills/agents/{agent}/import", func(w http.ResponseWriter, r *http.Request) {
+		agent := r.PathValue("agent")
+		var req struct {
+			RelPath string `json:"rel_path"`
+			Path    string `json:"path"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		relPath := req.RelPath
+		if relPath == "" {
+			relPath = req.Path
+		}
+		sk, err := m.ImportAgentLocalSkillToCenter(agent, relPath)
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, redactCenterSkillForHTTP(m, sk, wantsRedact(r)))
+	})
+
+	mux.HandleFunc("POST /api/skills/agents/{agent}/pull", func(w http.ResponseWriter, r *http.Request) {
+		agent := r.PathValue("agent")
+		var req struct {
+			RelPath string `json:"rel_path"`
+			Path    string `json:"path"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		relPath := req.RelPath
+		if relPath == "" {
+			relPath = req.Path
+		}
+		if err := m.PullAgentLocalSkillFromCenter(agent, relPath); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	mux.HandleFunc("POST /api/skills/agents/{agent}/delete-local", func(w http.ResponseWriter, r *http.Request) {
+		agent := r.PathValue("agent")
+		var req struct {
+			RelPath string `json:"rel_path"`
+			Path    string `json:"path"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		relPath := req.RelPath
+		if relPath == "" {
+			relPath = req.Path
+		}
+		if err := m.DeleteAgentLocalSkill(agent, relPath); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	mux.HandleFunc("POST /api/skills/sync", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			SkillIDs []string `json:"skill_ids"`
+			Agents   []string `json:"agents"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		if len(req.SkillIDs) == 0 || len(req.Agents) == 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "skill_ids and agents are required", "code": "INVALID_INPUT"})
+			return
+		}
+		res, err := m.SyncSkills(req.SkillIDs, req.Agents)
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, redactSyncResultForHTTP(m, res, wantsRedact(r)))
+	})
+
+	mux.HandleFunc("POST /api/skills/unsync", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			SkillIDs []string `json:"skill_ids"`
+			Agents   []string `json:"agents"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		if len(req.SkillIDs) == 0 || len(req.Agents) == 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "skill_ids and agents are required", "code": "INVALID_INPUT"})
+			return
+		}
+		res, err := m.UnsyncSkills(req.SkillIDs, req.Agents)
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, redactSyncResultForHTTP(m, res, wantsRedact(r)))
+	})
+
+	mux.HandleFunc("GET /api/skills/center", func(w http.ResponseWriter, r *http.Request) {
+		skills := m.ListCenterSkills(wantsRedact(r))
+		if skills == nil {
+			skills = []CenterSkillDTO{}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"skills": skills})
+	})
+
+	mux.HandleFunc("GET /api/skills/center/{id}/document", func(w http.ResponseWriter, r *http.Request) {
+		doc, err := m.GetCenterSkillDocument(r.PathValue("id"), wantsRedact(r))
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, doc)
+	})
+
+	mux.HandleFunc("POST /api/skills/center/import-path", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Path string `json:"path"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		sk, err := m.ImportPathToCenter(req.Path)
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, redactCenterSkillForHTTP(m, sk, wantsRedact(r)))
+	})
+
+	mux.HandleFunc("POST /api/skills/center/{id}/tags", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Tags []string `json:"tags"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		if err := m.SetSkillTags(r.PathValue("id"), req.Tags); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	mux.HandleFunc("DELETE /api/skills/center/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if err := m.DeleteCenterSkill(r.PathValue("id")); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	mux.HandleFunc("GET /api/skills/presets", func(w http.ResponseWriter, r *http.Request) {
+		presets := m.ListPresets()
+		if presets == nil {
+			presets = []SkillPreset{}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"presets": presets})
+	})
+
+	mux.HandleFunc("POST /api/skills/presets", func(w http.ResponseWriter, r *http.Request) {
+		var req SavePresetReq
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		p, err := m.SavePreset(req)
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, p)
+	})
+
+	mux.HandleFunc("DELETE /api/skills/presets/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if err := m.DeletePreset(r.PathValue("id")); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	mux.HandleFunc("POST /api/skills/settings", func(w http.ResponseWriter, r *http.Request) {
+		var req SkillsSettingsReq
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		if err := m.UpdateSettings(req); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	// --- Project & Linked Workspace Endpoints ---
+	mux.HandleFunc("GET /api/skills/projects", func(w http.ResponseWriter, r *http.Request) {
+		projects := m.ListProjects(wantsRedact(r))
+		if projects == nil {
+			projects = []ProjectDTO{}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"projects": projects})
+	})
+
+	mux.HandleFunc("POST /api/skills/projects", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Path string `json:"path"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		p, err := m.AddProject(req.Path, wantsRedact(r))
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, p)
+	})
+
+	mux.HandleFunc("POST /api/skills/projects/linked", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Name         string `json:"name"`
+			Path         string `json:"path"`
+			DisabledPath string `json:"disabled_path"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		p, err := m.AddLinkedWorkspace(req.Name, req.Path, req.DisabledPath, wantsRedact(r))
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, p)
+	})
+
+	mux.HandleFunc("POST /api/skills/projects/scan", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Root string `json:"root"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		items, err := m.ScanProjects(req.Root, wantsRedact(r))
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		if items == nil {
+			items = []ScanProjectItem{}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"projects": items})
+	})
+
+	mux.HandleFunc("POST /api/skills/projects/reorder", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			IDs []string `json:"ids"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		if err := m.ReorderProjects(req.IDs); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	mux.HandleFunc("DELETE /api/skills/projects/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if err := m.RemoveProject(r.PathValue("id")); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	mux.HandleFunc("GET /api/skills/projects/{id}/targets", func(w http.ResponseWriter, r *http.Request) {
+		targets, err := m.GetProjectAgentTargets(r.PathValue("id"))
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		if targets == nil {
+			targets = []ProjectAgentTargetDTO{}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"targets": targets})
+	})
+
+	mux.HandleFunc("GET /api/skills/projects/{id}/skills", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		skills, err := m.GetProjectSkills(id, wantsRedact(r))
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		if skills == nil {
+			skills = []AgentSkill{}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"project_id": id,
+			"skills":     skills,
+		})
+	})
+
+	mux.HandleFunc("GET /api/skills/projects/{id}/document", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		relPath := strings.TrimSpace(r.URL.Query().Get("rel_path"))
+		if relPath == "" {
+			relPath = strings.TrimSpace(r.URL.Query().Get("path"))
+		}
+		agent := strings.TrimSpace(r.URL.Query().Get("agent"))
+		doc, err := m.GetProjectSkillDocument(id, relPath, agent, wantsRedact(r))
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, doc)
+	})
+
+	mux.HandleFunc("POST /api/skills/projects/{id}/export", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var req struct {
+			SkillIDs []string `json:"skill_ids"`
+			Agents   []string `json:"agents"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		if len(req.SkillIDs) == 0 {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "skill_ids are required", "code": "INVALID_INPUT"})
+			return
+		}
+		res, err := m.ExportSkillsToProject(id, req.SkillIDs, req.Agents)
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, redactSyncResultForHTTP(m, res, wantsRedact(r)))
+	})
+
+	mux.HandleFunc("POST /api/skills/projects/{id}/import", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var req struct {
+			RelPath string `json:"rel_path"`
+			Path    string `json:"path"`
+			Agent   string `json:"agent"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		relPath := req.RelPath
+		if relPath == "" {
+			relPath = req.Path
+		}
+		sk, err := m.ImportProjectSkillToCenter(id, relPath, req.Agent)
+		if err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, redactCenterSkillForHTTP(m, sk, wantsRedact(r)))
+	})
+
+	mux.HandleFunc("POST /api/skills/projects/{id}/pull", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var req struct {
+			RelPath string `json:"rel_path"`
+			Path    string `json:"path"`
+			Agent   string `json:"agent"`
+			Force   bool   `json:"force"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		relPath := req.RelPath
+		if relPath == "" {
+			relPath = req.Path
+		}
+		if err := m.UpdateProjectSkillFromCenter(id, relPath, req.Agent, req.Force); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	mux.HandleFunc("POST /api/skills/projects/{id}/toggle", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var req struct {
+			RelPath string `json:"rel_path"`
+			Path    string `json:"path"`
+			Agent   string `json:"agent"`
+			Enabled bool   `json:"enabled"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		relPath := req.RelPath
+		if relPath == "" {
+			relPath = req.Path
+		}
+		if err := m.ToggleProjectSkill(id, relPath, req.Agent, req.Enabled); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
+
+	mux.HandleFunc("POST /api/skills/projects/{id}/delete-skill", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var req struct {
+			RelPath string `json:"rel_path"`
+			Path    string `json:"path"`
+			Agent   string `json:"agent"`
+		}
+		if err := decodeSkillsJSON(r, &req); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json request body", "code": "BAD_REQUEST"})
+			return
+		}
+		relPath := req.RelPath
+		if relPath == "" {
+			relPath = req.Path
+		}
+		if err := m.DeleteProjectSkill(id, relPath, req.Agent); err != nil {
+			writeSkillsErrHTTP(w, r, m, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	})
 }
 
 func (cfg *UpstreamConfig) handler(store *Store) http.HandlerFunc {

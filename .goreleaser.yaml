@@ -55,8 +55,24 @@ brews:
     commit_author:
       name: Iapa
       email: Iapa@users.noreply.github.com
+    commit_msg_template: "ctxview {{ .Tag }}"
+    custom_block: |
+      head do
+        url "https://github.com/Iapa/ctxview.git", branch: "main"
+        depends_on "go" => :build
+      end
+    install: |
+      if build.head?
+        system "go", "build", *std_go_args(ldflags: "-s -w -X main.version=HEAD"), "."
+      else
+        bin.install "ctxview"
+      end
+    service: |
+      run [opt_bin/"ctxview"]
+      environment_variables CTXVIEW_PORT: "8787"
+      keep_alive true
+      log_path var/"log/ctxview.log"
+      error_log_path var/"log/ctxview.log"
     test: |
       assert_match(/\S+/, shell_output("#{bin}/ctxview -version").strip)
-    extra_install: |
-      # Users can run `brew services start ctxview` if service block is added manually.
 

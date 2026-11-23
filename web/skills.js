@@ -556,12 +556,9 @@
     projectTagFilter: "all",
     projectSearch: "",
     viewMode: localStorage.getItem("ctxview.skills.viewMode") || "grid",
-    showUninstalled: localStorage.getItem("ctxview.skills.showUninstalled") === "1",
     collapseCoding: false,
     collapseLobster: false,
     collapseProjects: false,
-    showAllCodingSidebar: false,
-    showAllLobsterSidebar: false,
     selectedSkillRelPaths: new Set(),
     projectSelectedGroupIds: new Set(),
     lastConflict: null,
@@ -2539,7 +2536,7 @@
       }
 
       if (project.workspace_type !== "linked") {
-        const agChips = targets.map((tg) => {
+        const agChips = targets.filter((tg) => tg.installed).map((tg) => {
           const usable = tg.enabled && tg.installed;
           return h(
             "button",
@@ -3039,7 +3036,9 @@
     }
 
     function renderAgentToggles() {
-      const targets = state.projectTargets || [];
+      const targets = (state.projectTargets || []).filter(
+        (tg) => tg.installed || currentGroup.variants.some((v) => v.agent === tg.key)
+      );
       const cards = targets.map((tg) => {
         const variant = currentGroup.variants.find((v) => v.agent === tg.key);
         const deployed = Boolean(variant);
@@ -3399,15 +3398,16 @@
         )
       );
 
-      // Search & list all 56+ agents
+      // List locally detected agents by default; search across all adapters when query is non-empty
       const q = agentSearch.trim().toLowerCase();
-      const filteredAgents = (state.overview.agents || []).filter(
-        (a) =>
-          !q ||
+      const filteredAgents = (state.overview.agents || []).filter((a) => {
+        if (!q) return a.installed;
+        return (
           a.key.toLowerCase().includes(q) ||
           a.display_name.toLowerCase().includes(q) ||
           (a.display_skills_dir || "").toLowerCase().includes(q)
-      );
+        );
+      });
 
       const agentRows = filteredAgents.map((a) => {
         const draftPath = pathDrafts.has(a.key) ? pathDrafts.get(a.key) : a.skills_dir;
@@ -3499,17 +3499,26 @@
 
       const listHeader = h(
         "div",
-        { className: "sw-toolbar" },
-        h("strong", null, t(`Agent 适配器注册表 (${filteredAgents.length}/${(state.overview.agents || []).length})`, `Agents (${filteredAgents.length})`)),
-        makeSearchInput({
-          focusKey: "settings-agent-search",
-          value: agentSearch,
-          placeholder: t("按名称 / key / 路径搜索…", "Search agents..."),
-          onUpdate: (val, shouldRender) => {
-            agentSearch = val;
-            if (shouldRender) renderSettingsBody();
-          },
-        })
+        null,
+        h(
+          "div",
+          { className: "sw-toolbar" },
+          h("strong", null, t(`Agent 适配器注册表 (${filteredAgents.length})`, `Agents (${filteredAgents.length})`)),
+          makeSearchInput({
+            focusKey: "settings-agent-search",
+            value: agentSearch,
+            placeholder: t("按名称 / key / 路径搜索…", "Search agents..."),
+            onUpdate: (val, shouldRender) => {
+              agentSearch = val;
+              if (shouldRender) renderSettingsBody();
+            },
+          })
+        ),
+        h(
+          "div",
+          { style: { fontSize: "12px", color: "var(--muted)", marginTop: "4px" } },
+          t("搜索可查找未检测到的 Agent 并配置自定义路径", "Search to find undetected agents and configure custom paths")
+        )
       );
 
       withPreservedFocus(dlg, () => {
@@ -3554,8 +3563,8 @@
     const codingInstalled = codingAll.filter((a) => a.installed);
     const lobsterInstalled = lobsterAll.filter((a) => a.installed);
 
-    const codingVisible = state.showAllCodingSidebar ? codingAll : (codingInstalled.length ? codingInstalled : codingAll.slice(0, 8));
-    const lobsterVisible = state.showAllLobsterSidebar ? lobsterAll : (lobsterInstalled.length ? lobsterInstalled : lobsterAll);
+    const codingVisible = codingInstalled;
+    const lobsterVisible = lobsterInstalled;
 
     const renderAgentBtn = (a) => {
       const prefix = a.category === "lobster" ? "#/lobster-workspace/" : "#/global-workspace/";
@@ -3597,7 +3606,7 @@
             onClick: () => navigateTo("#/global-workspace"),
           },
           h("span", null, t("全局工作区", "Global Workspace")),
-          h("span", { className: "sw-count-pill" }, `${codingInstalled.length}/${codingAll.length}`)
+          h("span", { className: "sw-count-pill" }, `${codingInstalled.length}`)
         ),
         h(
           "button",
@@ -3617,23 +3626,9 @@
       h(
         "div",
         { className: "sw-nav-list", hidden: state.collapseCoding },
-        codingVisible.map(renderAgentBtn),
-        codingAll.length > codingVisible.length || state.showAllCodingSidebar
-          ? h(
-              "button",
-              {
-                type: "button",
-                className: "sw-agent-toggle-all",
-                onClick: () => {
-                  state.showAllCodingSidebar = !state.showAllCodingSidebar;
-                  render();
-                },
-              },
-              state.showAllCodingSidebar
-                ? t("仅显示已安装", "Show Installed Only")
-                : t(`显示全部 Coding Agent (${codingAll.length})`, `Show all (${codingAll.length})`)
-            )
-          : null
+        codingVisible.length
+          ? codingVisible.map(renderAgentBtn)
+          : h("div", { className: "sw-empty-hint" }, t("本地未检测到 Agent", "No agents detected"))
       )
     );
 
@@ -3652,7 +3647,7 @@
             onClick: () => navigateTo("#/lobster-workspace"),
           },
           h("span", null, t("Lobster Agent 矩阵", "Lobster Agents")),
-          h("span", { className: "sw-count-pill" }, `${lobsterInstalled.length}/${lobsterAll.length}`)
+          h("span", { className: "sw-count-pill" }, `${lobsterInstalled.length}`)
         ),
         h(
           "button",
@@ -3672,23 +3667,9 @@
       h(
         "div",
         { className: "sw-nav-list", hidden: state.collapseLobster },
-        lobsterVisible.map(renderAgentBtn),
-        lobsterAll.length > lobsterVisible.length || state.showAllLobsterSidebar
-          ? h(
-              "button",
-              {
-                type: "button",
-                className: "sw-agent-toggle-all",
-                onClick: () => {
-                  state.showAllLobsterSidebar = !state.showAllLobsterSidebar;
-                  render();
-                },
-              },
-              state.showAllLobsterSidebar
-                ? t("仅显示已安装", "Show Installed Only")
-                : t(`显示全部 Lobster Agent (${lobsterAll.length})`, `Show all (${lobsterAll.length})`)
-            )
-          : null
+        lobsterVisible.length
+          ? lobsterVisible.map(renderAgentBtn)
+          : h("div", { className: "sw-empty-hint" }, t("本地未检测到 Agent", "No agents detected"))
       )
     );
 
@@ -3987,13 +3968,14 @@
   function renderOverviewMain(category) {
     const allCatAgents = orderedAgents(category);
     const enabledAgents = allCatAgents.filter((a) => a.enabled);
-    const installedCount = enabledAgents.filter((a) => a.installed).length;
-    const totalLocalSkills = enabledAgents.reduce((acc, a) => acc + (a.local_count || 0), 0);
-    const totalManagedSkills = enabledAgents.reduce((acc, a) => acc + (a.managed_count || 0), 0);
+    const installedAgents = enabledAgents.filter((a) => a.installed);
+    const installedCount = installedAgents.length;
+    const totalLocalSkills = installedAgents.reduce((acc, a) => acc + (a.local_count || 0), 0);
+    const totalManagedSkills = installedAgents.reduce((acc, a) => acc + (a.managed_count || 0), 0);
 
     const q = state.searchAgent.trim().toLowerCase();
     const visibleAgents = enabledAgents.filter((a) => {
-      if (!state.showUninstalled && !a.installed) return false;
+      if (!a.installed) return false;
       if (!q) return true;
       return (
         a.display_name.toLowerCase().includes(q) ||
@@ -4024,7 +4006,7 @@
             h(
               "div",
               { className: "sw-header-meta" },
-              h("span", null, t(`已安装启用: ${installedCount}/${enabledAgents.length}`, `Installed: ${installedCount}/${enabledAgents.length}`)),
+              h("span", null, t(`本地已检测: ${installedCount}`, `Detected: ${installedCount}`)),
               h("span", null, "·"),
               h("span", null, t(`本地技能总数: ${totalLocalSkills}`, `Local skills: ${totalLocalSkills}`)),
               h("span", null, "·"),
@@ -4074,22 +4056,6 @@
       h(
         "div",
         { className: "sw-actions" },
-        h(
-          "button",
-          {
-            type: "button",
-            className: "sw-chip",
-            "aria-pressed": state.showUninstalled ? "true" : "false",
-            onClick: () => {
-              state.showUninstalled = !state.showUninstalled;
-              localStorage.setItem("ctxview.skills.showUninstalled", state.showUninstalled ? "1" : "0");
-              render();
-            },
-          },
-          state.showUninstalled
-            ? t(`显示全部 Agent (${enabledAgents.length})`, `Showing All (${enabledAgents.length})`)
-            : t(`显示未安装 Agent (+${enabledAgents.length - installedCount})`, `Show Uninstalled (+${enabledAgents.length - installedCount})`)
-        ),
         h(
           "button",
           {
@@ -4167,7 +4133,9 @@
       : h(
           "div",
           { className: "sw-empty" },
-          t("未找到匹配的已安装 Agent，可点击右上角“显示未安装 Agent”查看全部内置适配器。", "No matching agents. Toggle 'Show Uninstalled' to inspect all adapters.")
+          q
+            ? t("没有匹配的 Agent", "No matching agents")
+            : t("本地未检测到该分类的 Agent", "No agents detected locally")
         );
 
     return h("section", { className: "sw-main" }, headerCard, renderPresetBar(null), renderConflictNotice(), filterBar, gridEl);
@@ -5639,7 +5607,7 @@
       mainEl = proj ? renderProjectDetailMain(proj) : renderProjectsOverviewMain();
     } else if (state.selectedAgentKey) {
       const ag = agentMap().get(state.selectedAgentKey);
-      mainEl = ag ? renderAgentDetailMain(ag) : renderOverviewMain(state.routeKind === "lobster" ? "lobster" : "coding");
+      mainEl = ag && ag.installed ? renderAgentDetailMain(ag) : renderOverviewMain(state.routeKind === "lobster" ? "lobster" : "coding");
     } else {
       mainEl = renderOverviewMain(state.routeKind === "lobster" ? "lobster" : "coding");
     }
